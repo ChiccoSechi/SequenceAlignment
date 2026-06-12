@@ -6,6 +6,8 @@ This tool is designed to help users understand how these algorithms align biolog
 
 > **Try it live**: The application is hosted on GitHub Pages. [Click here to launch the Sequence Alignment Visualizer](https://ChiccoSechi.github.io/SequenceAlignment/).
 
+![Demo](docs/SequenceAlignmentGIF.gif)
+
 ### Algorithms 
 
 Compare sequences aligment using two distinct approaches:
