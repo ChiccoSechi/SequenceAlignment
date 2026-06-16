@@ -80,10 +80,20 @@ function findMatches(query, target, k) {
   return matches;
 }
 
-function scoreDiagonals(matches) {
-  const counts = new Map();
+function buildDotCells(matches, k) {
+  const cells = new Map();
   for (const m of matches) {
-    counts.set(m.diagonal, (counts.get(m.diagonal) || 0) + 1);
+    for (let o = 0; o < k; o++) {
+      cells.set((m.posQ + o) + ',' + (m.posT + o), m.diagonal);
+    }
+  }
+  return cells;
+}
+
+function scoreDiagonals(dotCells) {
+  const counts = new Map();
+  for (const diagonal of dotCells.values()) {
+    counts.set(diagonal, (counts.get(diagonal) || 0) + 1);
   }
   return [...counts.entries()]
     .map(([diagonal, count]) => ({ diagonal, count }))
@@ -229,7 +239,7 @@ function renderStep2(matches, diagonals, diagInfo, panel) {
   const bestName = diagInfo.get(best.diagonal).name;
   summary.textContent =
     `${diagonals.length} unique diagonal(s). ` +
-    `Best diagonal: ${best.diagonal} (${bestName}) with ${best.count} match(es).`;
+    `Best diagonal: ${best.diagonal} (${bestName}) with ${best.count} cell(s).`;
   tableCol.appendChild(summary);
 
   const recap = document.createElement('div');
@@ -272,10 +282,10 @@ function renderStep2(matches, diagonals, diagInfo, panel) {
   panel.appendChild(layout);
 }
 
-function renderStep3(query, target, matches, diagonals, diagInfo, panel) {
+function renderStep3(query, target, dotCells, diagonals, diagInfo, panel) {
   clearToHeading(panel, 'Diagonal Matrix');
 
-  if (!matches.length) {
+  if (!dotCells.size) {
     const p = document.createElement('p');
     p.className = 'placeholder';
     p.textContent = 'No k-tuple matches to place on the matrix.';
@@ -284,9 +294,6 @@ function renderStep3(query, target, matches, diagonals, diagInfo, panel) {
   }
 
   const n = query.length, m = target.length;
-
-  const matchCells = new Map();
-  for (const mt of matches) matchCells.set(mt.posQ + ',' + mt.posT, mt.diagonal);
 
   const wrap = document.createElement('div');
   wrap.className = 'matrix-wrap';
@@ -323,8 +330,8 @@ function renderStep3(query, target, matches, diagonals, diagInfo, panel) {
       td.style.cursor = 'default';
       td.dataset.i = i;
       td.dataset.j = j;
-      if (matchCells.has(i + ',' + j)) {
-        const diag = matchCells.get(i + ',' + j);
+      if (dotCells.has(i + ',' + j)) {
+        const diag = dotCells.get(i + ',' + j);
         td.dataset.match = '1';
         td.dataset.diag = diag;
         td.textContent = diagInfo.get(diag).name;
@@ -368,7 +375,7 @@ function renderStep3(query, target, matches, diagonals, diagInfo, panel) {
     });
     const info = diagInfo.get(selected);
     scoreLine.textContent =
-      `Diagonal ${selected} (${info.name}): score ${countByDiag.get(selected)} match(es)`;
+      `Diagonal ${selected} (${info.name}): score ${countByDiag.get(selected)} cell(s)`;
   }
 
   diagonals.forEach(d => {
@@ -406,12 +413,13 @@ function run() {
   if (k > maxK) { showError(`k must be at most ${maxK} (the shorter sequence length).`); return; }
 
   const matches = findMatches(seq1, seq2, k);
-  const diagonals = scoreDiagonals(matches);
+  const dotCells = buildDotCells(matches, k);
+  const diagonals = scoreDiagonals(dotCells);
   const diagInfo = buildDiagInfo(matches);
 
   renderStep1(seq1, k, els.step1);
   renderStep2(matches, diagonals, diagInfo, els.step2);
-  renderStep3(seq1, seq2, matches, diagonals, diagInfo, els.step3);
+  renderStep3(seq1, seq2, dotCells, diagonals, diagInfo, els.step3);
 }
 
 function reset() {

@@ -53,8 +53,8 @@ Dynamic programming is optimal, but it runs in O(n × m) time and space: every c
 The FASTA page visualizes the first three steps of the algorithm:
 
 1. **K-tuple Generation**: The query is split into all words of length **k** (the word length, user-defined). Each k-tuple is shown aligned under the query letters it was taken from.
-2. **Exact Matches in Target**: Each k-tuple is searched for in the target. Every occurrence records its position in the query, its position in the target, and the `diagonal = posT - posQ`. A table lists the matches, and each diagonal is scored by its number of matches.
-3. **Diagonal Matrix**: A Query × Target matrix where every match is marked and colored by its diagonal, with a unique name (A, B, C, ...) shared between the table and the matrix. Selecting a diagonal highlights it across the matrix and shows its score; the top-scoring diagonal is the strongest candidate region for local alignment.
+2. **Exact Matches in Target**: Each k-tuple is searched for in the target. Every occurrence records its position in the query, its position in the target, and the `diagonal = posT - posQ`. A table lists the matches, and each diagonal is scored by the number of cells it lights up in the dot plot.
+3. **Diagonal Matrix**: A Query × Target dot plot where each k-tuple match fills all the cells it covers along its diagonal, so overlapping matches merge into a continuous run. Cells are colored by diagonal and labeled with a unique name (A, B, C, ...) shared with the table. Selecting a diagonal highlights it across the matrix and shows its score, the total number of lit cells; the top-scoring diagonal is the strongest candidate region for local alignment.
 
 ### How It Works
 
