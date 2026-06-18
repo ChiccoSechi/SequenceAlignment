@@ -58,7 +58,8 @@
     </details>
 
     <div class="work-area" style="display:flex; flex-direction:column; gap:28px;">
-      <div class="panel">
+      <div style="display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start;">
+      <div class="panel" style="flex:1; min-width:300px;">
         <h3>Controls</h3>
         <div class="control-row">
           <div class="field">
@@ -91,13 +92,19 @@
         </div>
       </div>
 
-      <div class="panel" id="step1Panel">
+      <div class="panel" id="step1Panel" style="flex:1; min-width:300px;">
         <h3>K-tuple Generation</h3>
         <p class="placeholder">Run FASTA to see k-tuples.</p>
+      </div>
       </div>
 
       <div class="panel" id="step2Panel">
         <h3>Exact Matches in Target</h3>
+        <p class="placeholder">Run FASTA to see matches.</p>
+      </div>
+
+      <div class="panel" id="step2bPanel">
+        <h3>Matched k-tuples on the Target</h3>
         <p class="placeholder">Run FASTA to see matches.</p>
       </div>
 

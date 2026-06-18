@@ -33,6 +33,7 @@ const els = {
   chips: document.getElementById('chips'),
   step1: document.getElementById('step1Panel'),
   step2: document.getElementById('step2Panel'),
+  step2b: document.getElementById('step2bPanel'),
   step3: document.getElementById('step3Panel'),
 };
 
@@ -100,22 +101,18 @@ function scoreDiagonals(dotCells) {
     .sort((a, b) => b.count - a.count);
 }
 
-function buildDiagInfo(matches) {
+function buildDiagInfo(diagonals) {
   const map = new Map();
-  let next = 0;
-  for (const m of matches) {
-    if (!map.has(m.diagonal)) {
-      map.set(m.diagonal, {
-        name: diagName(next),
-        base: DIAGONAL_BASES[next % DIAGONAL_BASES.length],
-      });
-      next++;
-    }
-  }
+  diagonals.forEach((d, idx) => {
+    map.set(d.diagonal, {
+      name: diagName(idx),
+      base: DIAGONAL_BASES[idx % DIAGONAL_BASES.length],
+    });
+  });
   return map;
 }
 
-function charBox(ch, { header } = {}) {
+function charBox(ch, { header, base } = {}) {
   const box = document.createElement('span');
   box.textContent = ch;
   box.style.display = 'inline-block';
@@ -129,6 +126,9 @@ function charBox(ch, { header } = {}) {
   if (header) {
     box.style.background = 'var(--cell-header)';
     box.style.color = 'var(--cell-header-text)';
+  } else if (base) {
+    box.style.background = `rgb(${base})`;
+    box.style.color = '#fff';
   } else {
     box.style.background = 'var(--path)';
     box.style.color = 'var(--accent)';
@@ -154,29 +154,31 @@ function nameChip(info) {
   return chip;
 }
 
-function renderStep1(query, k, panel) {
-  clearToHeading(panel, 'K-tuple Generation');
-  const tuples = getKTuples(query, k);
-
+function buildStaircase(headerSeq, rows) {
   const scroller = document.createElement('div');
   scroller.style.overflowX = 'auto';
   scroller.style.paddingBottom = '6px';
 
   const charRow = document.createElement('div');
   charRow.style.whiteSpace = 'nowrap';
-  for (const ch of query) charRow.appendChild(charBox(ch, { header: true }));
+  for (const ch of headerSeq) charRow.appendChild(charBox(ch, { header: true }));
   scroller.appendChild(charRow);
 
-  for (const { tuple, posQ } of tuples) {
+  for (const r of rows) {
     const row = document.createElement('div');
     row.style.whiteSpace = 'nowrap';
     row.style.marginTop = '-1px';
-    row.style.paddingLeft = ((posQ - 1) * BOX) + 'px';
-    for (const ch of tuple) row.appendChild(charBox(ch));
+    row.style.paddingLeft = (r.offset * BOX) + 'px';
+    for (const ch of r.chars) row.appendChild(charBox(ch, { base: r.base }));
     scroller.appendChild(row);
   }
+  return scroller;
+}
 
-  panel.appendChild(scroller);
+function renderStep1(query, k, panel) {
+  clearToHeading(panel, 'K-tuple Generation');
+  const rows = getKTuples(query, k).map(t => ({ offset: t.posQ - 1, chars: t.tuple }));
+  panel.appendChild(buildStaircase(query, rows));
 }
 
 function renderStep2(matches, diagonals, diagInfo, panel) {
@@ -208,6 +210,7 @@ function renderStep2(matches, diagonals, diagInfo, panel) {
   ['k-tuple', 'Pos in Q', 'Pos in T', 'Diagonal (posT − posQ)', 'Name'].forEach(h => {
     const th = document.createElement('th');
     th.textContent = h;
+    th.style.textAlign = 'center';
     hr.appendChild(th);
   });
   thead.appendChild(hr);
@@ -221,9 +224,11 @@ function renderStep2(matches, diagonals, diagInfo, panel) {
     [m.tuple, m.posQ, m.posT, m.diagonal].forEach(v => {
       const td = document.createElement('td');
       td.textContent = v;
+      td.style.textAlign = 'center';
       tr.appendChild(td);
     });
     const nameTd = document.createElement('td');
+    nameTd.style.textAlign = 'center';
     nameTd.appendChild(nameChip(info));
     tr.appendChild(nameTd);
     tbody.appendChild(tr);
@@ -282,6 +287,26 @@ function renderStep2(matches, diagonals, diagInfo, panel) {
   panel.appendChild(layout);
 }
 
+function renderTargetMap(matches, diagInfo, target, panel) {
+  clearToHeading(panel, 'Matched k-tuples on the Target');
+
+  if (!matches.length) {
+    const p = document.createElement('p');
+    p.className = 'placeholder';
+    p.textContent = 'No exact k-tuple matches found in the Target.';
+    panel.appendChild(p);
+    return;
+  }
+
+  const ordered = [...matches].sort((a, b) => a.posT - b.posT || a.posQ - b.posQ);
+  const rows = ordered.map(mt => ({
+    offset: mt.posT - 1,
+    chars: mt.tuple,
+    base: diagInfo.get(mt.diagonal).base,
+  }));
+  panel.appendChild(buildStaircase(target, rows));
+}
+
 function renderStep3(query, target, dotCells, diagonals, diagInfo, panel) {
   clearToHeading(panel, 'Diagonal Matrix');
 
@@ -295,8 +320,16 @@ function renderStep3(query, target, dotCells, diagonals, diagInfo, panel) {
 
   const n = query.length, m = target.length;
 
+  const layout = document.createElement('div');
+  layout.style.display = 'flex';
+  layout.style.flexWrap = 'wrap';
+  layout.style.gap = '24px';
+  layout.style.alignItems = 'flex-start';
+
   const wrap = document.createElement('div');
   wrap.className = 'matrix-wrap';
+  wrap.style.flex = '0 1 auto';
+  wrap.style.minWidth = '0';
 
   const dim = Math.max(n, m);
   let dense = '';
@@ -328,8 +361,6 @@ function renderStep3(query, target, dotCells, diagonals, diagInfo, panel) {
       const td = document.createElement('td');
       td.className = 'cell-data';
       td.style.cursor = 'default';
-      td.dataset.i = i;
-      td.dataset.j = j;
       if (dotCells.has(i + ',' + j)) {
         const diag = dotCells.get(i + ',' + j);
         td.dataset.match = '1';
@@ -342,16 +373,24 @@ function renderStep3(query, target, dotCells, diagonals, diagInfo, panel) {
     table.appendChild(tr);
   }
   wrap.appendChild(table);
-  panel.appendChild(wrap);
+  layout.appendChild(wrap);
+
+  const sideCol = document.createElement('div');
+  sideCol.style.flex = '0 0 auto';
+  sideCol.style.minWidth = '220px';
 
   const scoreLine = document.createElement('div');
   scoreLine.className = 'score-display';
-  panel.appendChild(scoreLine);
+  scoreLine.style.marginTop = '0';
+  sideCol.appendChild(scoreLine);
 
   const list = document.createElement('div');
   list.className = 'paths-list';
   list.style.marginTop = '12px';
-  panel.appendChild(list);
+  sideCol.appendChild(list);
+
+  layout.appendChild(sideCol);
+  panel.appendChild(layout);
 
   const matchTds = Array.from(table.querySelectorAll('td.cell-data[data-match="1"]'));
   const countByDiag = new Map(diagonals.map(d => [d.diagonal, d.count]));
@@ -415,10 +454,11 @@ function run() {
   const matches = findMatches(seq1, seq2, k);
   const dotCells = buildDotCells(matches, k);
   const diagonals = scoreDiagonals(dotCells);
-  const diagInfo = buildDiagInfo(matches);
+  const diagInfo = buildDiagInfo(diagonals);
 
   renderStep1(seq1, k, els.step1);
   renderStep2(matches, diagonals, diagInfo, els.step2);
+  renderTargetMap(matches, diagInfo, seq2, els.step2b);
   renderStep3(seq1, seq2, dotCells, diagonals, diagInfo, els.step3);
 }
 
@@ -429,6 +469,7 @@ function reset() {
   clearError();
   resetPanel(els.step1, 'K-tuple Generation', 'Run FASTA to see k-tuples.');
   resetPanel(els.step2, 'Exact Matches in Target', 'Run FASTA to see matches.');
+  resetPanel(els.step2b, 'Matched k-tuples on the Target', 'Run FASTA to see matches.');
   resetPanel(els.step3, 'Diagonal Matrix', 'Run FASTA to see the diagonal matrix.');
 }
 
